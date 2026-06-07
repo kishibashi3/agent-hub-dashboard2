@@ -75,7 +75,7 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
         WHERE mc2.position=0 ${tAnd ? tAnd.replace('AND tenant_id', 'AND mc2.tenant_id') : ''}
           AND (m2.sender=? OR m2.recipient=?)
       )`;
-      extraParams.push(filterAgent, filterAgent, ...(tAnd ? [...tParams, ...tParams] : []));
+      extraParams.push(...(tAnd ? [...tParams, ...tParams] : []), filterAgent, filterAgent);
     }
     threadSql += ` GROUP BY mc.root_message_id`;
     if (filterFrom) { threadSql += ` HAVING thread_start >= ?`; extraParams.push(filterFrom); }
