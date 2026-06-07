@@ -27,6 +27,9 @@ app.get('/sse/live', (req: Request, res: Response) => {
 
   let lastId = req.query.since as string | undefined;
 
+  // Declare interval before send() so the error handler can clear it.
+  let interval: ReturnType<typeof setInterval>;
+
   const send = () => {
     try {
       const db = getDb();
@@ -39,12 +42,15 @@ app.get('/sse/live', (req: Request, res: Response) => {
         res.write(': heartbeat\n\n');
       }
     } catch {
-      res.write(': error\n\n');
+      // DB failure: stop the interval and close the SSE connection so
+      // the client reconnects instead of silently looping on errors.
+      clearInterval(interval);
+      res.end();
     }
   };
 
   send();
-  const interval = setInterval(send, 3000);
+  interval = setInterval(send, 3000);
   req.on('close', () => clearInterval(interval));
 });
 

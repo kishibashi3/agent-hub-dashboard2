@@ -41,10 +41,10 @@ export function renderHealth(): string {
        JOIN messages m ON m.id=mc.message_id ${tAnd ? tAnd.replace('AND tenant_id', 'AND m.tenant_id') : ''}
        WHERE mc.position=0 ${tAnd ? tAnd.replace('AND tenant_id', 'AND mc.tenant_id') : ''}
        GROUP BY mc.root_message_id
-       HAVING thread_size >= ${PPD_THREAD_THRESHOLD}
+       HAVING thread_size >= ?
        ORDER BY thread_size DESC
        LIMIT 50`
-    ).all(...(tAnd ? [...tParams, ...tParams] : [])) as { root_message_id: string; thread_size: number; first_ts: string | null; last_ts: string | null }[];
+    ).all(...(tAnd ? [...tParams, ...tParams] : []), PPD_THREAD_THRESHOLD) as { root_message_id: string; thread_size: number; first_ts: string | null; last_ts: string | null }[];
 
     for (const row of ppdRows) {
       const rootMsg = db.prepare(`SELECT sender, recipient FROM messages WHERE id = ? ${tAnd} LIMIT 1`).get(row.root_message_id, ...tParams) as { sender: string; recipient: string } | undefined;

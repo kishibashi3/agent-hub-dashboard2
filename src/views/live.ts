@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import { getDb, tenantCond } from '../db.js';
-import { htmlShell, renderNav } from '../layout.js';
+import { htmlShell, renderNav, asTrustedScript } from '../layout.js';
 
 // ── LiveMsg ────────────────────────────────────────────────────
 export interface LiveMsg { id: string; sender: string; recipient: string; body: string; created_at: string; }
@@ -53,7 +53,7 @@ es.onmessage = e => {
     const div = document.createElement('div');
     div.className = 'live-msg live-new';
     const ts = m.created_at.replace('T',' ').slice(0,19)+'Z';
-    div.innerHTML = '<div class="live-meta"><span style="color:var(--accent)">' + escH(m.sender) + '</span><span>→</span><span>' + escH(m.recipient) + '</span><span style="margin-left:auto">' + ts + '</span></div><div class="live-body">' + escH((m.body||'').slice(0,200)) + '</div>';
+    div.innerHTML = '<div class="live-meta"><span style="color:var(--accent)">' + escH(m.sender) + '</span><span>→</span><span>' + escH(m.recipient) + '</span><span style="margin-left:auto">' + escH(ts) + '</span></div><div class="live-body">' + escH((m.body||'').slice(0,200)) + '</div>';
     list.insertBefore(div, list.firstChild);
     setTimeout(() => div.classList.remove('live-new'), 1000);
     while (list.children.length > 100) list.removeChild(list.lastChild);
@@ -63,5 +63,5 @@ es.onerror = () => { status.textContent = '✗ disconnected — retrying...'; st
 function escH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 </script>`;
 
-  return htmlShell({ view: 'live', totalMsgs, totalAgents, totalLinks: 0, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, extraScripts });
+  return htmlShell({ view: 'live', totalMsgs, totalAgents, totalLinks: 0, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, extraScripts: asTrustedScript(extraScripts) });
 }
