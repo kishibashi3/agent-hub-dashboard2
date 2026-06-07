@@ -27,7 +27,7 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
          LEFT JOIN message_causes mc ON mc.message_id=m.id AND mc.position=0 ${tAnd ? tAnd.replace('AND tenant_id', 'AND mc.tenant_id') : ''}
          WHERE mc.root_message_id=? ${tAnd ? tAnd.replace('AND tenant_id', 'AND m.tenant_id') : ''}
          ORDER BY m.created_at ASC`
-      ).all(threadId, ...(tAnd ? [...tParams, ...tParams] : [])) as MsgRow[];
+      ).all(...(tAnd ? tParams : []), threadId, ...(tAnd ? tParams : [])) as MsgRow[];
       db.close();
 
       const msgItems = msgs.map((m, idx) => {
@@ -94,7 +94,7 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
          LEFT JOIN message_causes mc ON mc.message_id=m.id AND mc.position=0 ${tAnd ? tAnd.replace('AND tenant_id', 'AND mc.tenant_id') : ''}
          WHERE mc.root_message_id=? ${tAnd ? tAnd.replace('AND tenant_id', 'AND m.tenant_id') : ''}
          ORDER BY m.created_at ASC`
-      ).all(t.root_message_id, ...(tAnd ? [...tParams, ...tParams] : [])) as MsgRow[];
+      ).all(...(tAnd ? tParams : []), t.root_message_id, ...(tAnd ? tParams : [])) as MsgRow[];
 
       // Build children map
       const children: Record<string, string[]> = {};
@@ -143,7 +143,7 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
 
     const filterBar = `<form class="ct-filter-bar" method="get" action="/">
   <input type="hidden" name="view" value="causaltree">
-  <label>agent: <input type="text" name="agent" value="${escAttr(filterAgent ?? '')}" placeholder="@handle" style="width:120px"></label>
+  <label>agent: <input type="text" name="agent_filter" value="${escAttr(filterAgent ?? '')}" placeholder="@handle" style="width:120px"></label>
   <label>from: <input type="date" name="from" value="${escAttr(filterFrom ?? '')}"></label>
   <label>to: <input type="date" name="to" value="${escAttr(filterTo ?? '')}"></label>
   <button type="submit" class="ct-filter-apply">Apply</button>
