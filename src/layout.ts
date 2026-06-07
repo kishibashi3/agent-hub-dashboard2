@@ -1,6 +1,26 @@
 import { esc, escAttr } from './utils.js';
 import { TENANT } from './constants.js';
 
+// ── Security helpers ───────────────────────────────────────────
+/**
+ * Escape a JSON string for safe inline `<script>` embedding.
+ * Replaces `</` → `<\/` and `<!--` → `<\!--` so the HTML parser
+ * never sees a `</script>` or `<!--` token inside the JSON value.
+ */
+function jsonForScript(json: string): string {
+  return json.replace(/<\//g, '<\\/').replace(/<!--/g, '<\\!--');
+}
+
+/**
+ * Opaque brand for script strings that have been vetted as
+ * author-controlled (never derived from user-supplied data).
+ * Callers must explicitly call `asTrustedScript(s)`.
+ */
+export type TrustedScript = string & { readonly __brand: 'TrustedScript' };
+export function asTrustedScript(s: string): TrustedScript {
+  return s as TrustedScript;
+}
+
 // ── CSS ────────────────────────────────────────────────────────
 export const CSS = `
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -149,7 +169,7 @@ export function htmlShell(opts: {
   mainHtml: string;
   nodesJson?: string;
   linksJson?: string;
-  extraScripts?: string;
+  extraScripts?: TrustedScript;
 }): string {
   const {
     view,
@@ -234,8 +254,8 @@ const roleColor = id => {
 
 const pane = document.getElementById('graph-pane');
 if (pane) {
-  const allNodesRaw = ${nodesJson};
-  const allLinksRaw = ${linksJson};
+  const allNodesRaw = ${jsonForScript(nodesJson)};
+  const allLinksRaw = ${jsonForScript(linksJson)};
   const w = pane.offsetWidth, h = pane.offsetHeight;
   const svg = select('#svg').attr('viewBox', [0, 0, w, h]);
   const defs = svg.append('defs');
