@@ -6,7 +6,10 @@ import { renderTimeline } from './views/timeline.js';
 import { renderLinks } from './views/links.js';
 import { renderAgent } from './views/agent.js';
 import { renderCurrent } from './views/current.js';
+import { renderHealth } from './views/health.js';
 import { renderCausalTree } from './views/causaltree.js';
+import { renderLive, getLiveFeedData } from './views/live.js';
+import { getDb } from './db.js';
 
 export const app = express();
 
@@ -15,8 +18,35 @@ app.get('/health', (_req, res) => {
   res.status(200).send('OK');
 });
 
-// ── SSE stub (full implementation in feat/live-feed) ──────────
-// app.get('/sse/live', ...) — added in feat/live-feed
+// ── SSE /sse/live ──────────────────────────────────────────────
+app.get('/sse/live', (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  let lastId = req.query.since as string | undefined;
+
+  const send = () => {
+    try {
+      const db = getDb();
+      const msgs = getLiveFeedData(db, lastId);
+      db.close();
+      if (msgs.length > 0) {
+        lastId = msgs[0].created_at;
+        res.write(`data: ${JSON.stringify(msgs)}\n\n`);
+      } else {
+        res.write(': heartbeat\n\n');
+      }
+    } catch {
+      res.write(': error\n\n');
+    }
+  };
+
+  send();
+  const interval = setInterval(send, 3000);
+  req.on('close', () => clearInterval(interval));
+});
 
 // ── Main route ────────────────────────────────────────────────
 app.get('/', (req: Request, res: Response) => {
@@ -58,8 +88,14 @@ app.get('/', (req: Request, res: Response) => {
       case 'current':
         html = renderCurrent();
         break;
+      case 'health':
+        html = renderHealth();
+        break;
       case 'causaltree':
         html = renderCausalTree(thread, filterAgent, filterFrom, filterTo);
+        break;
+      case 'live':
+        html = renderLive();
         break;
       default:
         html = renderMesh(getData());
