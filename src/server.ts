@@ -6,7 +6,6 @@ import { renderTimeline } from './views/timeline.js';
 import { renderLinks } from './views/links.js';
 import { renderAgent } from './views/agent.js';
 import { renderCurrent } from './views/current.js';
-import { renderHealth } from './views/health.js';
 import { renderCausalTree } from './views/causaltree.js';
 
 export const app = express();
@@ -58,9 +57,6 @@ app.get('/', (req: Request, res: Response) => {
         break;
       case 'current':
         html = renderCurrent();
-        break;
-      case 'health':
-        html = renderHealth();
         break;
       case 'causaltree':
         html = renderCausalTree(thread, filterAgent, filterFrom, filterTo);
