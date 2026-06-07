@@ -77,7 +77,7 @@ export function renderHealth(): string {
            JOIN message_causes mc ON mc.message_id=m.id AND mc.position=0 ${tAnd ? tAnd.replace('AND tenant_id', 'AND mc.tenant_id') : ''}
            WHERE mc.root_message_id=? AND m.created_at > ? ${tAnd ? tAnd.replace('AND tenant_id', 'AND m.tenant_id') : ''}
            ORDER BY m.created_at ASC LIMIT 10`
-        ).all(mcRow.root_message_id, esc_msg.created_at, ...(tAnd ? [...tParams, ...tParams] : [])) as { body: string }[];
+        ).all(...(tAnd ? tParams : []), mcRow.root_message_id, esc_msg.created_at, ...(tAnd ? tParams : [])) as { body: string }[];
         for (const tm of threadMsgs) {
           if (GO_RESPONSE_SIGNALS.some(s => tm.body.includes(s))) { response = 'go'; break; }
           if (NON_GO_RESPONSE_SIGNALS.some(s => tm.body.includes(s))) { response = 'non-go'; break; }
