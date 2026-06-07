@@ -1,5 +1,5 @@
 import { getDb, tenantCond } from '../db.js';
-import { htmlShell, renderNav } from '../layout.js';
+import { htmlShell, renderNav, asTrustedScript } from '../layout.js';
 
 // ── renderTimeline ─────────────────────────────────────────────
 export function renderTimeline(rangeLabel: string): string {
@@ -163,5 +163,5 @@ if (agBuckets.length === 0) {
 }
 </script>`;
 
-  return htmlShell({ view: 'timeline', totalMsgs, totalAgents, totalLinks: 0, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, extraScripts });
+  return htmlShell({ view: 'timeline', totalMsgs, totalAgents, totalLinks: 0, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, extraScripts: asTrustedScript(extraScripts) });
 }
