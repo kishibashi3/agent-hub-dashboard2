@@ -1,0 +1,32 @@
+// ── Helpers ────────────────────────────────────────────────────
+export function esc(s: unknown): string {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+export function escAttr(s: unknown): string {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+export function fmtRelative(tsStr: string | null): string {
+  if (!tsStr) return '—';
+  try {
+    const ts = new Date(tsStr).getTime();
+    const now = Date.now();
+    const s = Math.floor((now - ts) / 1000);
+    if (s < 60) return '今';
+    if (s < 3600) return `${Math.floor(s/60)}分前`;
+    if (s < 86400) return `${Math.floor(s/3600)}時間前`;
+    return `${Math.floor(s/86400)}日前`;
+  } catch { return '—'; }
+}
+
+export function computePresence(lastActiveAt: string | null): 'active'|'warm'|'cold'|'absent' {
+  if (!lastActiveAt) return 'absent';
+  const ageMin = (Date.now() - new Date(lastActiveAt).getTime()) / 60000;
+  if (ageMin <= 2) return 'active';
+  if (ageMin <= 10) return 'warm';
+  if (ageMin <= 60) return 'cold';
+  return 'absent';
+}
