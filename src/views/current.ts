@@ -9,7 +9,7 @@ export function renderCurrent(): string {
   let totalMsgs = 0;
   let totalAgents = 0;
 
-  interface Peer { name: string; displayName: string | null; lastActiveAt: string | null; queueDepth: number; presence: string; currentTaskId: string | null; currentTaskPreview: string; }
+  interface Peer { name: string; displayName: string | null; lastActiveAt: string | null; queueDepth: number; presence: string; currentTaskPreview: string; }
   interface Task { rootId: string; size: number; start: string | null; end: string | null; participants: string[]; lastRecipient: string | null; preview: string; isStuck: boolean; }
 
   let peers: Peer[] = [];
@@ -39,25 +39,20 @@ export function renderCurrent(): string {
     const queueMap: Record<string, number> = {};
     for (const r of queueRows) queueMap[r.recipient] = r.queue_depth;
 
-    // latest root per participant
-    const latestRoots = db.prepare(
-      `SELECT m.recipient, mc.root_message_id, m.created_at
+    // oldest unread message per recipient — used for "current task" display
+    const unreadRows = db.prepare(
+      `SELECT m.recipient, m.sender, m.body
        FROM messages m
-       JOIN message_causes mc ON mc.tenant_id=m.tenant_id AND mc.message_id=m.id
-       WHERE mc.position=0 ${tAnd ? tAnd.replace('AND tenant_id', 'AND mc.tenant_id') : ''}
-       ORDER BY m.recipient, m.created_at DESC`
-    ).all(...tParams) as { recipient: string; root_message_id: string; created_at: string }[];
-    const latestRootMap: Record<string, string> = {};
-    for (const r of latestRoots) {
-      if (!latestRootMap[r.recipient]) latestRootMap[r.recipient] = r.root_message_id;
-    }
-
-    // root message previews
-    const rootPreviews: Record<string, string> = {};
-    const rootIds = [...new Set(Object.values(latestRootMap))];
-    for (const rootId of rootIds) {
-      const msg = db.prepare(`SELECT body FROM messages WHERE id = ? ${tAnd} LIMIT 1`).get(rootId, ...tParams) as { body: string } | undefined;
-      if (msg) rootPreviews[rootId] = msg.body.slice(0, 60);
+       LEFT JOIN read_receipts rr ON rr.tenant_id=m.tenant_id AND rr.message_id=m.id AND rr.reader=m.recipient
+       WHERE rr.message_id IS NULL ${tAnd ? tAnd.replace('AND tenant_id', 'AND m.tenant_id') : ''}
+       ORDER BY m.recipient, m.created_at ASC
+       LIMIT 500`
+    ).all(...tParams) as { recipient: string; sender: string; body: string }[];
+    const unreadPreviewMap: Record<string, string> = {};
+    for (const r of unreadRows) {
+      if (!unreadPreviewMap[r.recipient]) {
+        unreadPreviewMap[r.recipient] = `${r.sender}: ${r.body.slice(0, 55)}`;
+      }
     }
 
     peers = peerRows.map(p => ({
@@ -66,8 +61,7 @@ export function renderCurrent(): string {
       lastActiveAt: p.last_active_at,
       queueDepth: queueMap[p.name] ?? 0,
       presence: computePresence(p.last_active_at),
-      currentTaskId: latestRootMap[p.name] ?? null,
-      currentTaskPreview: latestRootMap[p.name] ? (rootPreviews[latestRootMap[p.name]] ?? '') : '',
+      currentTaskPreview: (queueMap[p.name] ?? 0) > 0 ? (unreadPreviewMap[p.name] ?? '') : '',
     }));
 
     // top 30 active threads
@@ -116,8 +110,8 @@ export function renderCurrent(): string {
   }
 
   const peerRows2 = peers.map(p => {
-    const taskLink = p.currentTaskId
-      ? `<a href="/?view=causaltree&thread=${escAttr(p.currentTaskId)}" style="color:var(--text2);font-size:11px">${esc(p.currentTaskPreview || p.currentTaskId.slice(0,8)+'…')}</a>`
+    const taskLink = p.currentTaskPreview
+      ? `<span style="color:var(--text2);font-size:11px">${esc(p.currentTaskPreview)}</span>`
       : `<span style="color:var(--text3);font-size:11px">—</span>`;
     const dispName = p.displayName && p.displayName !== p.name ? ` <span style="font-size:10px;color:var(--text2)">${esc(p.displayName)}</span>` : '';
     return `<tr>
