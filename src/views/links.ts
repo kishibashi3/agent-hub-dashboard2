@@ -16,7 +16,7 @@ export function renderLinks(): string {
 
     const rows = db.prepare(
       `SELECT sender, recipient, COUNT(*) FROM messages ${tc.cond ? 'WHERE ' + tc.cond.slice(4) : ''} GROUP BY sender, recipient`
-    ).all(...tc.params) as [string, string, number][];
+    ).raw(true).all(...tc.params) as [string, string, number][]; // .raw(true): row を配列で受け取る（デフォルトのオブジェクト形式は for..of destructuring 不可）
 
     const agg: Record<string, { total: number; aToB: number; bToA: number }> = {};
     for (const [s, r, c] of rows) {
