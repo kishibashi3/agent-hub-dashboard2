@@ -1,0 +1,20 @@
+name: Make package public
+
+on:
+  workflow_dispatch:
+
+jobs:
+  set-visibility:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Set package visibility to public
+        run: |
+          curl -X PATCH \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/user/packages/container/agent-hub-dashboard2 \
+            -d '{"visibility":"public"}' \
+            -v
