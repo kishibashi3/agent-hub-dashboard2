@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import { getDb, tenantCond } from '../db.js';
 import { htmlShell, renderNav, asTrustedScript } from '../layout.js';
+import { BASE_PATH } from '../constants.js';
 
 // ── LiveMsg ────────────────────────────────────────────────────
 export interface LiveMsg { id: string; sender: string; recipient: string; body: string; created_at: string; }
@@ -43,7 +44,7 @@ export function renderLive(): string {
 </div></div>`;
 
   const extraScripts = `<script>
-const es = new EventSource('/sse/live');
+const es = new EventSource('${BASE_PATH}/sse/live');
 const list = document.getElementById('live-feed-list');
 const status = document.getElementById('live-status');
 es.onopen = () => { status.textContent = '● connected — watching all messages'; status.style.color='#39d353'; };
