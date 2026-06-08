@@ -20,7 +20,7 @@ export function getData(): MeshData {
     const tc = tenantCond();
     const rows = db.prepare(
       `SELECT sender, recipient, COUNT(*) FROM messages ${tc.cond ? 'WHERE ' + tc.cond.slice(4) : ''} GROUP BY sender, recipient`
-    ).all(...tc.params) as [string, string, number][];
+    ).raw(true).all(...tc.params) as [string, string, number][];
 
     const totalMsgs = (db.prepare(
       `SELECT COUNT(*) FROM messages ${tc.cond ? 'WHERE ' + tc.cond.slice(4) : ''}`
