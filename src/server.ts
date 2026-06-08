@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { PORT, DB_PATH, TENANT } from './constants.js';
+import { PORT, DB_PATH, TENANT, BASE_PATH } from './constants.js';
 import { errorPage } from './layout.js';
 import { getData, renderMesh, renderMatrix } from './views/mesh.js';
 import { renderTimeline } from './views/timeline.js';
@@ -86,7 +86,7 @@ app.get('/', (req: Request, res: Response) => {
         break;
       case 'agent':
         if (!agent) {
-          res.redirect('/?view=mesh');
+          res.redirect(`${BASE_PATH}/?view=mesh`);
           return;
         }
         html = renderAgent(agent);
