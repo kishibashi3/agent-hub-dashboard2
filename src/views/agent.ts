@@ -1,7 +1,7 @@
 import { getDb, tenantCond } from '../db.js';
 import { esc, escAttr } from '../utils.js';
 import { htmlShell, renderNav } from '../layout.js';
-import { TENANT } from '../constants.js';
+import { TENANT, BASE_PATH } from '../constants.js';
 
 // ── renderAgent ────────────────────────────────────────────────
 export function renderAgent(handle: string): string {
@@ -73,7 +73,7 @@ agent <strong>${h}</strong> not found in ${esc(TENANT ?? 'any tenant')}.
   } else {
     const peerList = d.topPeers.length
       ? `<ol class="peer-list">${d.topPeers.map(p =>
-          `<li><a href="/?agent=${escAttr(p.peer)}">${esc(p.peer)}</a> <span class="dim">${p.count} msgs</span></li>`
+          `<li><a href="${BASE_PATH}/?agent=${escAttr(p.peer)}">${esc(p.peer)}</a> <span class="dim">${p.count} msgs</span></li>`
         ).join('')}</ol>`
       : `<p class="dim">(no peers)</p>`;
 

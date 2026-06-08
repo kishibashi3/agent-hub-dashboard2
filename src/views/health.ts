@@ -6,6 +6,7 @@ import {
   CDS_HIGH_SIGNALS, CDS_LOW_SIGNALS, CDS_WARNING_THRESHOLD, CDS_DANGER_THRESHOLD,
   META_SIGNALS, MOR_WARNING, MOR_DANGER,
   ESCALATION_SIGNALS, GO_RESPONSE_SIGNALS, NON_GO_RESPONSE_SIGNALS,
+  BASE_PATH,
 } from '../constants.js';
 
 // ── renderHealth ───────────────────────────────────────────────
@@ -118,7 +119,7 @@ export function renderHealth(): string {
 
   const ppdRows = ppdThreads.map(t =>
     `<tr>
-  <td><a href="/?view=causaltree&thread=${escAttr(t.rootId)}">${esc(t.rootId.slice(0,8))}…</a></td>
+  <td><a href="${BASE_PATH}/?view=causaltree&thread=${escAttr(t.rootId)}">${esc(t.rootId.slice(0,8))}…</a></td>
   <td class="cell-num">${t.size}</td>
   <td>${esc(t.sender)} → ${esc(t.recipient)}</td>
   <td>${fmtRelative(t.lastTs)}</td>

@@ -1,5 +1,5 @@
 import { esc, escAttr } from './utils.js';
-import { TENANT } from './constants.js';
+import { TENANT, BASE_PATH } from './constants.js';
 
 // ── Security helpers ───────────────────────────────────────────
 /**
@@ -404,30 +404,31 @@ ${extraScripts}
 
 // ── Nav bar ────────────────────────────────────────────────────
 export function renderNav(currentView: string, agentHandle?: string): string {
+  const bp = BASE_PATH;
   const views = [
-    ['mesh', 'Mesh', '/'],
-    ['matrix', 'Matrix', '/?view=matrix'],
-    ['timeline', 'Timeline', '/?view=timeline'],
-    ['links', 'Links', '/?view=links'],
+    ['mesh', 'Mesh', `${bp}/`],
+    ['matrix', 'Matrix', `${bp}/?view=matrix`],
+    ['timeline', 'Timeline', `${bp}/?view=timeline`],
+    ['links', 'Links', `${bp}/?view=links`],
   ];
   const liveViews = [
-    ['live', '📡 Live Feed', '/?view=live'],
-    ['current', '⚡ Current', '/?view=current'],
+    ['live', '📡 Live Feed', `${bp}/?view=live`],
+    ['current', '⚡ Current', `${bp}/?view=current`],
   ];
   const drillViews = [
-    ['causaltree', 'Causal Tree', '/?view=causaltree'],
-    ['health', '🔥 Health', '/?view=health'],
+    ['causaltree', 'Causal Tree', `${bp}/?view=causaltree`],
+    ['health', '🔥 Health', `${bp}/?view=health`],
   ];
 
   const link = (key: string, label: string, url: string) =>
     `<a href="${url}" class="${currentView === key ? 'active' : ''}">${label}</a>`;
 
-  const agentUrl = agentHandle ? `/?agent=${escAttr(agentHandle)}` : '/?';
+  const agentUrl = agentHandle ? `${bp}/?agent=${escAttr(agentHandle)}` : `${bp}/?`;
   const agentLink = currentView === 'agent' && agentHandle
     ? `<a class="active" href="${agentUrl}">Agent Detail</a>`
     : agentHandle
     ? `<a href="${agentUrl}">Agent Detail</a>`
-    : `<a class="disabled" href="/" title="Click a handle in Mesh/Links to open Agent Detail">Agent Detail</a>`;
+    : `<a class="disabled" href="${bp}/" title="Click a handle in Mesh/Links to open Agent Detail">Agent Detail</a>`;
 
   return `<div id="nav-bar">
   <span class="nav-section-label">Overview</span>

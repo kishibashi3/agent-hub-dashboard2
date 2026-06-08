@@ -1,6 +1,7 @@
 import { getDb, tenantCond } from '../db.js';
 import { esc, escAttr } from '../utils.js';
 import { htmlShell, renderNav } from '../layout.js';
+import { BASE_PATH } from '../constants.js';
 
 // ── renderCausalTree ───────────────────────────────────────────
 export function renderCausalTree(threadId?: string, filterAgent?: string, filterFrom?: string, filterTo?: string): string {
@@ -48,7 +49,7 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
       const navHtml = renderNav('causaltree');
       const mainHtml = `<div class="alt-main"><div class="view-content">
 <div class="thread-detail-header">
-  <a class="thread-detail-back" href="/?view=causaltree">← back to threads</a>
+  <a class="thread-detail-back" href="${BASE_PATH}/?view=causaltree">← back to threads</a>
   <span style="font-size:13px;color:var(--accent)">${esc(threadId.slice(0,8))}…</span>
   <span class="dim">${msgs.length} messages</span>
 </div>
@@ -134,20 +135,20 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
     <span style="color:var(--accent)">${esc(t.root_message_id.slice(0,8))}…</span>
     <span class="dim">${t.thread_size} msgs</span>
     <span class="dim">${esc(startStr)} → ${esc(endStr)}</span>
-    <a href="/?view=causaltree&thread=${escAttr(t.root_message_id)}" style="margin-left:auto;font-size:11px;color:var(--accent)" onclick="event.stopPropagation()">→ detail</a>
+    <a href="${BASE_PATH}/?view=causaltree&thread=${escAttr(t.root_message_id)}" style="margin-left:auto;font-size:11px;color:var(--accent)" onclick="event.stopPropagation()">→ detail</a>
   </summary>
   <div style="padding:12px 14px;background:var(--bg)">${treeHtml}</div>
 </details>`);
     }
     db.close();
 
-    const filterBar = `<form class="ct-filter-bar" method="get" action="/">
+    const filterBar = `<form class="ct-filter-bar" method="get" action="${BASE_PATH}/">
   <input type="hidden" name="view" value="causaltree">
   <label>agent: <input type="text" name="agent_filter" value="${escAttr(filterAgent ?? '')}" placeholder="@handle" style="width:120px"></label>
   <label>from: <input type="date" name="from" value="${escAttr(filterFrom ?? '')}"></label>
   <label>to: <input type="date" name="to" value="${escAttr(filterTo ?? '')}"></label>
   <button type="submit" class="ct-filter-apply">Apply</button>
-  <a href="/?view=causaltree" style="font-size:11px;color:var(--text2)">reset</a>
+  <a href="${BASE_PATH}/?view=causaltree" style="font-size:11px;color:var(--text2)">reset</a>
 </form>`;
 
     const navHtml = renderNav('causaltree');
