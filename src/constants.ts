@@ -2,6 +2,7 @@
 export const DB_PATH = process.env.AGENT_HUB_DB_PATH ?? '/app/data/app.db';
 export const TENANT = process.env.AGENT_HUB_TENANT ?? null;
 export const PORT = parseInt(process.env.PORT ?? '8080', 10);
+export const BASE_PATH = (process.env.BASE_PATH ?? '').replace(/\/$/, '');
 export const STALE_HOURS = parseInt(process.env.AGENT_HUB_DASHBOARD_STALE_HOURS ?? '24', 10);
 
 // ── Health constants ───────────────────────────────────────────
