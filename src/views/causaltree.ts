@@ -22,13 +22,15 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
 
     if (threadId) {
       // Thread detail view
+      // NOTE: root message has no message_causes entry (no caused_by), so we include it
+      // via m.id=? in addition to the reply messages matched by mc.root_message_id=?
       const msgs = db.prepare(
         `SELECT m.id, m.sender, m.recipient, m.body, m.created_at, mc.caused_by_id
          FROM messages m
          LEFT JOIN message_causes mc ON mc.message_id=m.id AND mc.position=0 ${tAnd ? tAnd.replace('AND tenant_id', 'AND mc.tenant_id') : ''}
-         WHERE mc.root_message_id=? ${tAnd ? tAnd.replace('AND tenant_id', 'AND m.tenant_id') : ''}
+         WHERE (m.id=? OR mc.root_message_id=?) ${tAnd ? tAnd.replace('AND tenant_id', 'AND m.tenant_id') : ''}
          ORDER BY m.created_at ASC`
-      ).all(...(tAnd ? tParams : []), threadId, ...(tAnd ? tParams : [])) as MsgRow[];
+      ).all(...(tAnd ? tParams : []), threadId, threadId, ...(tAnd ? tParams : [])) as MsgRow[];
       db.close();
 
       const msgItems = msgs.map((m, idx) => {
@@ -93,9 +95,9 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
         `SELECT m.id, m.sender, m.recipient, m.body, m.created_at, mc.caused_by_id
          FROM messages m
          LEFT JOIN message_causes mc ON mc.message_id=m.id AND mc.position=0 ${tAnd ? tAnd.replace('AND tenant_id', 'AND mc.tenant_id') : ''}
-         WHERE mc.root_message_id=? ${tAnd ? tAnd.replace('AND tenant_id', 'AND m.tenant_id') : ''}
+         WHERE (m.id=? OR mc.root_message_id=?) ${tAnd ? tAnd.replace('AND tenant_id', 'AND m.tenant_id') : ''}
          ORDER BY m.created_at ASC`
-      ).all(...(tAnd ? tParams : []), t.root_message_id, ...(tAnd ? tParams : [])) as MsgRow[];
+      ).all(...(tAnd ? tParams : []), t.root_message_id, t.root_message_id, ...(tAnd ? tParams : [])) as MsgRow[];
 
       // Build children map
       const children: Record<string, string[]> = {};
