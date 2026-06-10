@@ -9,13 +9,30 @@ import { renderCurrent } from './views/current.js';
 import { renderHealth } from './views/health.js';
 import { renderCausalTree } from './views/causaltree.js';
 import { renderLive, getLiveFeedData } from './views/live.js';
-import { getDb } from './db.js';
+import { getDb, setThreadStatus, type ThreadStatus } from './db.js';
 
 export const app = express();
+app.use(express.json());
 
 // ── /health ────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
   res.status(200).send('OK');
+});
+
+// ── POST /api/thread-status ────────────────────────────────────
+app.post('/api/thread-status', (req: Request, res: Response) => {
+  const { thread_id, status } = req.body as { thread_id?: string; status?: string };
+  if (!thread_id || !['running', 'done', 'stash'].includes(status ?? '')) {
+    res.status(400).json({ error: 'thread_id and status (running|done|stash) required' });
+    return;
+  }
+  try {
+    setThreadStatus(thread_id, TENANT ?? 'default', status as ThreadStatus);
+    res.json({ ok: true });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ error: msg });
+  }
 });
 
 // ── SSE /sse/live ──────────────────────────────────────────────

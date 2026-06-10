@@ -1,7 +1,7 @@
-import { getDb, tenantCond } from '../db.js';
+import { getDb, tenantCond, loadThreadStatuses, effectiveStatus } from '../db.js';
 import { esc, escAttr } from '../utils.js';
 import { htmlShell, renderNav } from '../layout.js';
-import { BASE_PATH } from '../constants.js';
+import { BASE_PATH, TENANT } from '../constants.js';
 
 // ── renderCausalTree ───────────────────────────────────────────
 export function renderCausalTree(threadId?: string, filterAgent?: string, filterFrom?: string, filterTo?: string): string {
@@ -88,6 +88,9 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
     const baseParams = tAnd ? [...tParams, ...tParams, ...extraParams] : extraParams;
     const threadRows = db.prepare(threadSql).all(...baseParams) as { root_message_id: string; thread_size: number; thread_start: string | null; thread_end: string | null }[];
 
+    const statusMap = loadThreadStatuses();
+    const tenantKey = TENANT ?? 'default';
+
     // For each thread, get messages to build tree
     const threadHtmlList: string[] = [];
     for (const t of threadRows) {
@@ -134,13 +137,17 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
       const rootSender = rootMsg ? esc(rootMsg.sender) : '?';
       const rootRecipient = rootMsg ? esc(rootMsg.recipient) : '?';
 
-      // Status heuristic: running = last message within 1h, else done
-      const nowMs = Date.now();
-      const endMs = t.thread_end ? new Date(t.thread_end).getTime() : 0;
-      const isRunning = nowMs - endMs < 60 * 60 * 1000;
-      const statusTag = isRunning
-        ? `<span style="background:#39d35333;color:#39d353;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:bold">running</span>`
-        : `<span style="background:#484f5833;color:#7d8590;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:bold">done</span>`;
+      const status = effectiveStatus(t.root_message_id, tenantKey, t.thread_end, statusMap);
+      const statusTag = status === 'running'
+        ? `<span class="ct-badge ct-badge-running">▶ running</span>`
+        : status === 'stash'
+        ? `<span class="ct-badge ct-badge-stash">📌 stash</span>`
+        : `<span class="ct-badge ct-badge-done">✓ done</span>`;
+      const markButtons = `<span class="ct-mark-btns">
+        <button class="ct-mark" data-thread="${escAttr(t.root_message_id)}" data-status="running" title="mark running">▶</button>
+        <button class="ct-mark" data-thread="${escAttr(t.root_message_id)}" data-status="done" title="mark done">✓</button>
+        <button class="ct-mark" data-thread="${escAttr(t.root_message_id)}" data-status="stash" title="stash">📌</button>
+      </span>`;
       threadHtmlList.push(`
 <details style="margin-bottom:10px;border:1px solid var(--border);border-radius:6px;overflow:hidden">
   <summary style="padding:10px 14px;background:var(--bg2);cursor:pointer;font-size:12px;list-style:none">
@@ -150,6 +157,7 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
       <span style="color:var(--text)">${rootRecipient}</span>
       <span style="color:var(--text2);font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${preview}</span>
       ${statusTag}
+      ${markButtons}
       <span class="dim" style="white-space:nowrap">${t.thread_size} msgs</span>
       <a href="${BASE_PATH}/?view=causaltree&thread=${escAttr(t.root_message_id)}" style="font-size:11px;color:var(--accent);white-space:nowrap" onclick="event.stopPropagation()">→ detail</a>
     </div>
@@ -174,7 +182,22 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
 ${filterBar}
 <p class="dim" style="margin-bottom:12px">${threadRows.length} threads (top 30 by size)</p>
 ${threadHtmlList.join('')}
-</div></div>`;
+</div></div>
+<script>
+document.querySelectorAll('.ct-mark').forEach(btn => {
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    e.preventDefault();
+    const thread = btn.dataset.thread;
+    const status = btn.dataset.status;
+    fetch('${BASE_PATH}/api/thread-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ thread_id: thread, status })
+    }).then(r => r.ok ? location.reload() : alert('Failed to update status'));
+  });
+});
+</script>`;
 
     return htmlShell({ view: 'causaltree', totalMsgs, totalAgents, totalLinks: 0, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml });
   } catch (err) {
