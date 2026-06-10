@@ -44,23 +44,37 @@ export function renderLive(): string {
 </div></div>`;
 
   const extraScripts = `<script>
-const es = new EventSource('${BASE_PATH}/sse/live');
 const list = document.getElementById('live-feed-list');
 const status = document.getElementById('live-status');
-es.onopen = () => { status.textContent = '● connected — watching all messages'; status.style.color='#39d353'; };
-es.onmessage = e => {
-  const msgs = JSON.parse(e.data);
-  msgs.forEach(m => {
-    const div = document.createElement('div');
-    div.className = 'live-msg live-new';
-    const ts = m.created_at.replace('T',' ').slice(0,19)+'Z';
-    div.innerHTML = '<div class="live-meta"><span style="color:var(--accent)">' + escH(m.sender) + '</span><span>→</span><span>' + escH(m.recipient) + '</span><span style="margin-left:auto">' + escH(ts) + '</span></div><div class="live-body">' + escH((m.body||'').slice(0,200)) + '</div>';
-    list.insertBefore(div, list.firstChild);
-    setTimeout(() => div.classList.remove('live-new'), 1000);
-    while (list.children.length > 100) list.removeChild(list.lastChild);
-  });
-};
-es.onerror = () => { status.textContent = '✗ disconnected — retrying...'; status.style.color='#f78166'; };
+let lastSeen = '';
+let es = null;
+let retryTimer = null;
+
+function connect() {
+  if (es) { es.onopen = es.onmessage = es.onerror = null; es.close(); }
+  const url = lastSeen ? '${BASE_PATH}/sse/live?since=' + encodeURIComponent(lastSeen) : '${BASE_PATH}/sse/live';
+  es = new EventSource(url);
+  es.onopen = () => { status.textContent = '● connected — watching all messages'; status.style.color='#39d353'; };
+  es.onmessage = e => {
+    const msgs = JSON.parse(e.data);
+    msgs.forEach(m => {
+      if (!lastSeen || m.created_at > lastSeen) lastSeen = m.created_at;
+      const div = document.createElement('div');
+      div.className = 'live-msg live-new';
+      const ts = m.created_at.replace('T',' ').slice(0,19)+'Z';
+      div.innerHTML = '<div class="live-meta"><span style="color:var(--accent)">' + escH(m.sender) + '</span><span>→</span><span>' + escH(m.recipient) + '</span><span style="margin-left:auto">' + escH(ts) + '</span></div><div class="live-body">' + escH((m.body||'').slice(0,200)) + '</div>';
+      list.insertBefore(div, list.firstChild);
+      setTimeout(() => div.classList.remove('live-new'), 1000);
+      while (list.children.length > 100) list.removeChild(list.lastChild);
+    });
+  };
+  es.onerror = () => {
+    status.textContent = '✗ disconnected — retrying...'; status.style.color='#f78166';
+    es.close();
+    retryTimer = setTimeout(connect, 3000);
+  };
+}
+connect();
 function escH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 </script>`;
 
