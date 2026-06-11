@@ -131,13 +131,24 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
       const treeHtml = roots.map(r => renderTreeNode(r, 0)).join('');
       const startStr = t.thread_start ? t.thread_start.replace('T',' ').slice(0,16)+'Z' : '?';
       const endStr = t.thread_end ? t.thread_end.replace('T',' ').slice(0,16)+'Z' : '?';
+      const rootMsg = msgMap[t.root_message_id] ?? msgs[0];
+      const senderRecipient = rootMsg ? `${esc(rootMsg.sender)} → ${esc(rootMsg.recipient)}: ` : '';
+      const bodyPreview = rootMsg ? esc(rootMsg.body.slice(0, 80)) : '';
+      const isRunning = t.thread_end ? (Date.now() - new Date(t.thread_end).getTime()) < 3_600_000 : false;
+      const statusTag = isRunning
+        ? `<span style="background:#1a4a1a;color:#7fc97f;padding:1px 6px;border-radius:3px;font-size:10px;white-space:nowrap">running</span>`
+        : `<span style="background:#333;color:#888;padding:1px 6px;border-radius:3px;font-size:10px;white-space:nowrap">done</span>`;
       threadHtmlList.push(`
 <details style="margin-bottom:10px;border:1px solid var(--border);border-radius:6px;overflow:hidden">
-  <summary style="padding:10px 14px;background:var(--bg2);cursor:pointer;font-size:12px;list-style:none;display:flex;gap:12px;align-items:center">
-    <span style="color:var(--accent)">${esc(t.root_message_id.slice(0,8))}…</span>
-    <span class="dim">${t.thread_size} msgs</span>
-    <span class="dim">${esc(startStr)} → ${esc(endStr)}</span>
-    <a href="${BASE_PATH}/?view=causaltree&thread=${escAttr(t.root_message_id)}" style="margin-left:auto;font-size:11px;color:var(--accent)" onclick="event.stopPropagation()">→ detail</a>
+  <summary style="padding:10px 14px;background:var(--bg2);cursor:pointer;font-size:12px;list-style:none">
+    <div style="display:flex;gap:12px;align-items:center">
+      <span style="color:var(--accent);white-space:nowrap">${esc(t.root_message_id.slice(0,8))}…</span>
+      <span class="dim" style="white-space:nowrap">${t.thread_size} msgs</span>
+      ${statusTag}
+      <span class="dim" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0">${senderRecipient}${bodyPreview}</span>
+      <span class="dim" style="white-space:nowrap">${esc(startStr)} → ${esc(endStr)}</span>
+      <a href="${BASE_PATH}/?view=causaltree&thread=${escAttr(t.root_message_id)}" style="font-size:11px;color:var(--accent);white-space:nowrap" onclick="event.stopPropagation()">→ detail</a>
+    </div>
   </summary>
   <div style="padding:12px 14px;background:var(--bg)">${treeHtml}</div>
 </details>`);
