@@ -9,8 +9,9 @@ export const STALE_HOURS = parseInt(process.env.AGENT_HUB_DASHBOARD_STALE_HOURS 
 
 // ── otelite (token 燃費 / OTel traces) ─────────────────────────
 // otelite は外部ツール (Grafana Alloy ベース) で改造しない。既存 API の消費のみ。
-// 空文字を渡すと無効化 (全ノード N/A)。
-export const OTELITE_URL = (process.env.OTELITE_URL ?? 'http://192.168.3.45:3001').replace(/\/$/, '');
+// infra 値はコードにハードコードせず deploy 設定 (docker-compose) で渡す (ecosystem redline #3)。
+// 未設定 (空文字) なら feature 無効化 = 全ノード N/A に縮退。
+export const OTELITE_URL = (process.env.OTELITE_URL ?? '').replace(/\/$/, '');
 export const OTELITE_TIMEOUT_MS = parseInt(process.env.OTELITE_TIMEOUT_MS ?? '1500', 10);
 export const OTELITE_CONCURRENCY = parseInt(process.env.OTELITE_CONCURRENCY ?? '8', 10);
 export const OTELITE_CACHE_TTL_MS = parseInt(process.env.OTELITE_CACHE_TTL_MS ?? '60000', 10);
