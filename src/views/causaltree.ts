@@ -1,10 +1,9 @@
 import { getDb, tenantCond } from '../db.js';
 import { esc, escAttr } from '../utils.js';
 import { htmlShell, renderNav } from '../layout.js';
-import { BASE_PATH } from '../constants.js';
 
 // ── renderCausalTree ───────────────────────────────────────────
-export function renderCausalTree(threadId?: string, filterAgent?: string, filterFrom?: string, filterTo?: string): string {
+export function renderCausalTree(threadId?: string, filterAgent?: string, filterFrom?: string, filterTo?: string, prefix: string = ''): string {
   const db = getDb();
   let totalMsgs = 0;
   let totalAgents = 0;
@@ -51,13 +50,13 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
       const navHtml = renderNav('causaltree');
       const mainHtml = `<div class="alt-main"><div class="view-content">
 <div class="thread-detail-header">
-  <a class="thread-detail-back" href="${BASE_PATH}/?view=causaltree">← back to threads</a>
+  <a class="thread-detail-back" href="?view=causaltree">← back to threads</a>
   <span style="font-size:13px;color:var(--accent)">${esc(threadId.slice(0,8))}…</span>
   <span class="dim">${msgs.length} messages</span>
 </div>
 <div class="thread-msg-list">${msgItems}</div>
 </div></div>`;
-      return htmlShell({ view: 'causaltree', totalMsgs, totalAgents, totalLinks: 0, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml });
+      return htmlShell({ view: 'causaltree', totalMsgs, totalAgents, totalLinks: 0, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, prefix });
     }
 
     // Thread list view
@@ -151,7 +150,7 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
       <span style="color:var(--text2);font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${preview}</span>
       ${statusTag}
       <span class="dim" style="white-space:nowrap">${t.thread_size} msgs</span>
-      <a href="${BASE_PATH}/?view=causaltree&thread=${escAttr(t.root_message_id)}" style="font-size:11px;color:var(--accent);white-space:nowrap" onclick="event.stopPropagation()">→ detail</a>
+      <a href="?view=causaltree&thread=${escAttr(t.root_message_id)}" style="font-size:11px;color:var(--accent);white-space:nowrap" onclick="event.stopPropagation()">→ detail</a>
     </div>
   </summary>
   <div style="padding:12px 14px;background:var(--bg)">${treeHtml}</div>
@@ -159,13 +158,13 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
     }
     db.close();
 
-    const filterBar = `<form class="ct-filter-bar" method="get" action="${BASE_PATH}/">
+    const filterBar = `<form class="ct-filter-bar" method="get" action=".">
   <input type="hidden" name="view" value="causaltree">
   <label>agent: <input type="text" name="agent_filter" value="${escAttr(filterAgent ?? '')}" placeholder="@handle" style="width:120px"></label>
   <label>from: <input type="date" name="from" value="${escAttr(filterFrom ?? '')}"></label>
   <label>to: <input type="date" name="to" value="${escAttr(filterTo ?? '')}"></label>
   <button type="submit" class="ct-filter-apply">Apply</button>
-  <a href="${BASE_PATH}/?view=causaltree" style="font-size:11px;color:var(--text2)">reset</a>
+  <a href="?view=causaltree" style="font-size:11px;color:var(--text2)">reset</a>
 </form>`;
 
     const navHtml = renderNav('causaltree');
@@ -176,7 +175,7 @@ ${filterBar}
 ${threadHtmlList.join('')}
 </div></div>`;
 
-    return htmlShell({ view: 'causaltree', totalMsgs, totalAgents, totalLinks: 0, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml });
+    return htmlShell({ view: 'causaltree', totalMsgs, totalAgents, totalLinks: 0, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, prefix });
   } catch (err) {
     try { db.close(); } catch { /* ignore */ }
     throw err;

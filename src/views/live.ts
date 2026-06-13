@@ -1,7 +1,6 @@
 import Database from 'better-sqlite3';
 import { getDb, tenantCond } from '../db.js';
 import { htmlShell, renderNav, asTrustedScript } from '../layout.js';
-import { BASE_PATH } from '../constants.js';
 
 // ── LiveMsg ────────────────────────────────────────────────────
 export interface LiveMsg { id: string; sender: string; recipient: string; body: string; created_at: string; }
@@ -23,7 +22,7 @@ export function getLiveFeedData(db: Database.Database, since?: string): LiveMsg[
 }
 
 // ── renderLive ─────────────────────────────────────────────────
-export function renderLive(): string {
+export function renderLive(prefix: string): string {
   const db = getDb();
   let totalMsgs = 0;
   let totalAgents = 0;
@@ -52,7 +51,7 @@ let retryTimer = null;
 
 function connect() {
   if (es) { es.onopen = es.onmessage = es.onerror = null; es.close(); }
-  const url = lastSeen ? '${BASE_PATH}/sse/live?since=' + encodeURIComponent(lastSeen) : '${BASE_PATH}/sse/live';
+  const url = lastSeen ? 'sse/live?since=' + encodeURIComponent(lastSeen) : 'sse/live';
   es = new EventSource(url);
   es.onopen = () => { status.textContent = '● connected — watching all messages'; status.style.color='#39d353'; };
   es.onmessage = e => {
@@ -78,5 +77,5 @@ connect();
 function escH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 </script>`;
 
-  return htmlShell({ view: 'live', totalMsgs, totalAgents, totalLinks: 0, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, extraScripts: asTrustedScript(extraScripts) });
+  return htmlShell({ view: 'live', totalMsgs, totalAgents, totalLinks: 0, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, extraScripts: asTrustedScript(extraScripts), prefix });
 }

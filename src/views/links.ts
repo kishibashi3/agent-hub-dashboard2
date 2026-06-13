@@ -1,10 +1,9 @@
 import { getDb, tenantCond } from '../db.js';
 import { esc, escAttr } from '../utils.js';
 import { htmlShell, renderNav } from '../layout.js';
-import { BASE_PATH } from '../constants.js';
 
 // ── renderLinks ────────────────────────────────────────────────
-export function renderLinks(): string {
+export function renderLinks(prefix: string): string {
   const db = getDb();
   let totalMsgs = 0;
   let totalAgents = 0;
@@ -41,7 +40,7 @@ export function renderLinks(): string {
   const rows = items.map((link, i) =>
     `<tr>
   <td class="rank">${i + 1}</td>
-  <td><a href="${BASE_PATH}/?agent=${escAttr(link.a)}">${esc(link.a)}</a> &nbsp;↔&nbsp; <a href="${BASE_PATH}/?agent=${escAttr(link.b)}">${esc(link.b)}</a></td>
+  <td><a href="?agent=${escAttr(link.a)}">${esc(link.a)}</a> &nbsp;↔&nbsp; <a href="?agent=${escAttr(link.b)}">${esc(link.b)}</a></td>
   <td class="cell-num">${link.total}</td>
   <td class="cell-num dim">${link.aToB}→</td>
   <td class="cell-num dim">←${link.bToA}</td>
@@ -59,5 +58,5 @@ export function renderLinks(): string {
 </table>
 </div></div>`;
 
-  return htmlShell({ view: 'links', totalMsgs, totalAgents, totalLinks: items.length, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml });
+  return htmlShell({ view: 'links', totalMsgs, totalAgents, totalLinks: items.length, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, prefix });
 }

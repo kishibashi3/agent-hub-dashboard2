@@ -1,5 +1,5 @@
 import { esc, escAttr } from './utils.js';
-import { TENANT, BASE_PATH } from './constants.js';
+import { TENANT } from './constants.js';
 
 // ── Security helpers ───────────────────────────────────────────
 /**
@@ -170,6 +170,8 @@ export function htmlShell(opts: {
   nodesJson?: string;
   linksJson?: string;
   extraScripts?: TrustedScript;
+  /** Deployment base path (URL prefix), '' at root. Emitted as `<base href>`. */
+  prefix?: string;
 }): string {
   const {
     view,
@@ -183,6 +185,7 @@ export function htmlShell(opts: {
     nodesJson = '[]',
     linksJson = '[]',
     extraScripts = '',
+    prefix = '',
   } = opts;
   const bodyClass = opts.bodyClass ?? `view-${view}`;
   const tenantLabel = TENANT ? esc(TENANT) : 'all tenants';
@@ -191,6 +194,7 @@ export function htmlShell(opts: {
 <html>
 <head>
 <meta charset="utf-8">
+<base href="${escAttr(prefix)}/">
 <title>agent-hub dashboard v2</title>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
 <style>${CSS}</style>
@@ -404,31 +408,32 @@ ${extraScripts}
 
 // ── Nav bar ────────────────────────────────────────────────────
 export function renderNav(currentView: string, agentHandle?: string): string {
-  const bp = BASE_PATH;
+  // Links are relative; the browser resolves them against the `<base href>`
+  // emitted by htmlShell (the deployment prefix). No `${BASE_PATH}` prefixing.
   const views = [
-    ['mesh', 'Mesh', `${bp}/`],
-    ['matrix', 'Matrix', `${bp}/?view=matrix`],
-    ['timeline', 'Timeline', `${bp}/?view=timeline`],
-    ['links', 'Links', `${bp}/?view=links`],
+    ['mesh', 'Mesh', `.`],
+    ['matrix', 'Matrix', `?view=matrix`],
+    ['timeline', 'Timeline', `?view=timeline`],
+    ['links', 'Links', `?view=links`],
   ];
   const liveViews = [
-    ['live', '📡 Live Feed', `${bp}/?view=live`],
-    ['current', '⚡ Current', `${bp}/?view=current`],
+    ['live', '📡 Live Feed', `?view=live`],
+    ['current', '⚡ Current', `?view=current`],
   ];
   const drillViews = [
-    ['causaltree', 'Causal Tree', `${bp}/?view=causaltree`],
-    ['health', '🔥 Health', `${bp}/?view=health`],
+    ['causaltree', 'Causal Tree', `?view=causaltree`],
+    ['health', '🔥 Health', `?view=health`],
   ];
 
   const link = (key: string, label: string, url: string) =>
     `<a href="${url}" class="${currentView === key ? 'active' : ''}">${label}</a>`;
 
-  const agentUrl = agentHandle ? `${bp}/?agent=${escAttr(agentHandle)}` : `${bp}/?`;
+  const agentUrl = agentHandle ? `?agent=${escAttr(agentHandle)}` : `?`;
   const agentLink = currentView === 'agent' && agentHandle
     ? `<a class="active" href="${agentUrl}">Agent Detail</a>`
     : agentHandle
     ? `<a href="${agentUrl}">Agent Detail</a>`
-    : `<a class="disabled" href="${bp}/" title="Click a handle in Mesh/Links to open Agent Detail">Agent Detail</a>`;
+    : `<a class="disabled" href="." title="Click a handle in Mesh/Links to open Agent Detail">Agent Detail</a>`;
 
   return `<div id="nav-bar">
   <span class="nav-section-label">Overview</span>
