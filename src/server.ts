@@ -72,7 +72,7 @@ app.get('/sse/live', (req: Request, res: Response) => {
 });
 
 // ── Main route ────────────────────────────────────────────────
-app.get('/', (req: Request, res: Response) => {
+app.get('/', async (req: Request, res: Response) => {
   const agent = req.query.agent as string | undefined;
   const rawView = req.query.view as string | undefined;
   const view = rawView ?? (agent ? 'agent' : 'mesh');
@@ -115,7 +115,7 @@ app.get('/', (req: Request, res: Response) => {
         html = renderHealth();
         break;
       case 'causaltree':
-        html = renderCausalTree(thread, filterAgent, filterFrom, filterTo);
+        html = await renderCausalTree(thread, filterAgent, filterFrom, filterTo);
         break;
       case 'live':
         html = renderLive();

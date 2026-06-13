@@ -1,10 +1,29 @@
 import { getDb, tenantCond, loadThreadStatuses, effectiveStatus } from '../db.js';
-import { esc, escAttr } from '../utils.js';
+import { esc, escAttr, fmtTokens } from '../utils.js';
 import { htmlShell, renderNav } from '../layout.js';
 import { BASE_PATH, TENANT } from '../constants.js';
+import { fetchUsageMap, sumUsage, type TokenUsage } from '../otelite.js';
+
+// ── token 燃費バッジ (issue #23) ───────────────────────────────
+// otelite の per-msg_id token usage をノードに表示する。↓=input ↑=output ⚡=cache_read。
+function fuelBadge(u: TokenUsage | null | undefined): string {
+  if (!u) {
+    return `<span class="tree-fuel tree-fuel-na" title="otelite に該当 span なし (非LLM経路 / 未収集)">⛽ N/A</span>`;
+  }
+  const title = `input ${u.input} / output ${u.output} / cache_read ${u.cacheRead}${u.model ? ' · ' + u.model : ''}`;
+  return `<span class="tree-fuel" title="${escAttr(title)}">⛽ <span class="tf-in">${fmtTokens(u.input)}↓</span> <span class="tf-out">${fmtTokens(u.output)}↑</span>${u.cacheRead ? ` <span class="tf-cache">${fmtTokens(u.cacheRead)}⚡</span>` : ''}</span>`;
+}
+
+function fuelTotalBadge(u: TokenUsage, label: string): string {
+  const title = `input ${u.input} / output ${u.output} / cache_read ${u.cacheRead}`;
+  if (u.input === 0 && u.output === 0 && u.cacheRead === 0) {
+    return `<span class="thread-fuel-total thread-fuel-na" title="otelite データなし">⛽ ${esc(label)}: N/A</span>`;
+  }
+  return `<span class="thread-fuel-total" title="${escAttr(title)}">⛽ ${esc(label)}: <span class="tf-in">${fmtTokens(u.input)}↓</span> <span class="tf-out">${fmtTokens(u.output)}↑</span>${u.cacheRead ? ` <span class="tf-cache">${fmtTokens(u.cacheRead)}⚡</span>` : ''}</span>`;
+}
 
 // ── renderCausalTree ───────────────────────────────────────────
-export function renderCausalTree(threadId?: string, filterAgent?: string, filterFrom?: string, filterTo?: string): string {
+export async function renderCausalTree(threadId?: string, filterAgent?: string, filterFrom?: string, filterTo?: string): Promise<string> {
   const db = getDb();
   let totalMsgs = 0;
   let totalAgents = 0;
@@ -33,6 +52,10 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
       ).all(...(tAnd ? tParams : []), threadId, threadId, ...(tAnd ? tParams : [])) as MsgRow[];
       db.close();
 
+      // otelite から per-msg_id の token 燃費を引く (msg_id → trace_id 直引き)
+      const usageMap = await fetchUsageMap(msgs.map(m => m.id));
+      const threadTotal = sumUsage(msgs.map(m => usageMap.get(m.id) ?? null));
+
       const msgItems = msgs.map((m, idx) => {
         const isRoot = idx === 0;
         const ts = m.created_at ? m.created_at.replace('T',' ').slice(0,19)+'Z' : '';
@@ -41,6 +64,7 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
     <span style="color:var(--accent)">${esc(m.sender)}</span>
     <span>→</span>
     <span>${esc(m.recipient)}</span>
+    ${fuelBadge(usageMap.get(m.id))}
     <span style="margin-left:auto">${esc(ts)}</span>
   </div>
   ${m.caused_by_id ? `<div class="thread-msg-cause">caused by: ${esc(m.caused_by_id.slice(0,8))}…</div>` : ''}
@@ -54,6 +78,7 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
   <a class="thread-detail-back" href="${BASE_PATH}/?view=causaltree">← back to threads</a>
   <span style="font-size:13px;color:var(--accent)">${esc(threadId.slice(0,8))}…</span>
   <span class="dim">${msgs.length} messages</span>
+  ${fuelTotalBadge(threadTotal, 'thread')}
 </div>
 <div class="thread-msg-list">${msgItems}</div>
 </div></div>`;
@@ -91,8 +116,10 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
     const statusMap = loadThreadStatuses();
     const tenantKey = TENANT ?? 'default';
 
-    // For each thread, get messages to build tree
-    const threadHtmlList: string[] = [];
+    // Phase 1: 各スレッドの msgs を DB から取得 (network 待ちの前に DB を閉じる)
+    interface ThreadData { t: typeof threadRows[number]; msgs: MsgRow[]; }
+    const threadData: ThreadData[] = [];
+    const allMsgIds: string[] = [];
     for (const t of threadRows) {
       const msgs = db.prepare(
         `SELECT m.id, m.sender, m.recipient, m.body, m.created_at, mc.caused_by_id
@@ -101,7 +128,17 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
          WHERE (m.id=? OR mc.root_message_id=?) ${tAnd ? tAnd.replace('AND tenant_id', 'AND m.tenant_id') : ''}
          ORDER BY m.created_at ASC`
       ).all(...(tAnd ? tParams : []), t.root_message_id, t.root_message_id, ...(tAnd ? tParams : [])) as MsgRow[];
+      threadData.push({ t, msgs });
+      for (const m of msgs) allMsgIds.push(m.id);
+    }
+    db.close();
 
+    // Phase 2: otelite からツリー内 msg の token 燃費を一括取得 (cache + concurrency cap)
+    const usageMap = await fetchUsageMap(allMsgIds);
+
+    // Phase 3: render
+    const threadHtmlList: string[] = [];
+    for (const { t, msgs } of threadData) {
       // Build children map
       const children: Record<string, string[]> = {};
       const msgMap: Record<string, MsgRow> = {};
@@ -121,7 +158,7 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
         if (!m) return '';
         const kids = children[id] ?? [];
         const ts = m.created_at ? m.created_at.replace('T',' ').slice(0,13)+'Z' : '';
-        const summary = `<span class="tree-sender">${esc(m.sender)}</span> → <span class="tree-recipient">${esc(m.recipient)}</span>: <span class="tree-body">${esc(m.body.slice(0,60))}</span><span class="tree-time">${esc(ts)}</span>`;
+        const summary = `<span class="tree-sender">${esc(m.sender)}</span> → <span class="tree-recipient">${esc(m.recipient)}</span>: <span class="tree-body">${esc(m.body.slice(0,60))}</span>${fuelBadge(usageMap.get(m.id))}<span class="tree-time">${esc(ts)}</span>`;
         if (kids.length === 0) {
           return `<div class="tree-node tree-leaf">${summary}</div>`;
         }
@@ -136,6 +173,7 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
       const preview = rootMsg ? esc(rootMsg.body.slice(0, 80)) + (rootMsg.body.length > 80 ? '…' : '') : '';
       const rootSender = rootMsg ? esc(rootMsg.sender) : '?';
       const rootRecipient = rootMsg ? esc(rootMsg.recipient) : '?';
+      const threadTotal = sumUsage(msgs.map(m => usageMap.get(m.id) ?? null));
 
       const status = effectiveStatus(t.root_message_id, tenantKey, t.thread_end, statusMap);
       const statusTag = status === 'running'
@@ -158,6 +196,7 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
       <span style="color:var(--text2);font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${preview}</span>
       ${statusTag}
       ${markButtons}
+      ${fuelTotalBadge(threadTotal, 'Σ')}
       <span class="dim" style="white-space:nowrap">${t.thread_size} msgs</span>
       <a href="${BASE_PATH}/?view=causaltree&thread=${escAttr(t.root_message_id)}" style="font-size:11px;color:var(--accent);white-space:nowrap" onclick="event.stopPropagation()">→ detail</a>
     </div>
@@ -165,7 +204,6 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
   <div style="padding:12px 14px;background:var(--bg)">${treeHtml}</div>
 </details>`);
     }
-    db.close();
 
     const filterBar = `<form class="ct-filter-bar" method="get" action="${BASE_PATH}/">
   <input type="hidden" name="view" value="causaltree">
@@ -180,7 +218,7 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
     const mainHtml = `<div class="alt-main"><div class="view-content">
 <h2>Causal Tree — Thread Explorer</h2>
 ${filterBar}
-<p class="dim" style="margin-bottom:12px">${threadRows.length} threads (top 30 by size)</p>
+<p class="dim" style="margin-bottom:12px">${threadRows.length} threads (top 30 by size) · ⛽ = token 燃費 (otelite, ↓in ↑out ⚡cache)</p>
 ${threadHtmlList.join('')}
 </div></div>
 <script>

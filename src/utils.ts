@@ -22,6 +22,18 @@ export function fmtRelative(tsStr: string | null): string {
   } catch { return '—'; }
 }
 
+// 12 → "12", 4811 → "4.8k", 143264 → "143k", 10278914 → "10.3M"
+export function fmtTokens(n: number): string {
+  if (!Number.isFinite(n)) return '0';
+  if (n < 1000) return String(n);
+  if (n < 1_000_000) {
+    const k = n / 1000;
+    return (k < 10 ? k.toFixed(1) : Math.round(k).toString()) + 'k';
+  }
+  const m = n / 1_000_000;
+  return (m < 10 ? m.toFixed(1) : Math.round(m).toString()) + 'M';
+}
+
 export function computePresence(lastActiveAt: string | null): 'active'|'warm'|'cold'|'absent' {
   if (!lastActiveAt) return 'absent';
   const ageMin = (Date.now() - new Date(lastActiveAt).getTime()) / 60000;
