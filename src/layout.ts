@@ -114,6 +114,16 @@ table.link-list .bar { height:8px; background:var(--accent); border-radius:2px; 
 .tree-recipient { color:var(--text); }
 .tree-body { color:var(--text2); font-size:11px; }
 .tree-time { color:var(--text3); font-size:10px; margin-left:6px; }
+.tree-fuel { font-size:10px; margin-left:8px; color:var(--text2); white-space:nowrap; cursor:help; }
+.tree-fuel-na { color:var(--text3); opacity:0.7; }
+.tree-fuel .tf-in { color:#58a6ff; }
+.tree-fuel .tf-out { color:#39d353; }
+.tree-fuel .tf-cache { color:#a371f7; }
+.thread-fuel-total { font-size:10px; padding:1px 6px; border-radius:3px; background:var(--bg2); border:1px solid var(--border); color:var(--text2); white-space:nowrap; cursor:help; }
+.thread-fuel-total.thread-fuel-na { color:var(--text3); opacity:0.7; }
+.thread-fuel-total .tf-in { color:#58a6ff; }
+.thread-fuel-total .tf-out { color:#39d353; }
+.thread-fuel-total .tf-cache { color:#a371f7; }
 details.tree-item > summary { cursor:pointer; list-style:none; }
 details.tree-item > summary::-webkit-details-marker { display:none; }
 details.tree-item > summary::before { content:'▶ '; font-size:9px; color:var(--text3); margin-right:3px; }
