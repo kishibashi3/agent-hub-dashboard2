@@ -1,10 +1,10 @@
 import { getDb, tenantCond } from '../db.js';
 import { esc, escAttr, fmtRelative, computePresence } from '../utils.js';
 import { htmlShell, renderNav } from '../layout.js';
-import { STALE_HOURS, BASE_PATH } from '../constants.js';
+import { STALE_HOURS } from '../constants.js';
 
 // ── renderCurrent ──────────────────────────────────────────────
-export function renderCurrent(): string {
+export function renderCurrent(prefix: string): string {
   const db = getDb();
   let totalMsgs = 0;
   let totalAgents = 0;
@@ -115,7 +115,7 @@ export function renderCurrent(): string {
       : `<span style="color:var(--text3);font-size:11px">—</span>`;
     const dispName = p.displayName && p.displayName !== p.name ? ` <span style="font-size:10px;color:var(--text2)">${esc(p.displayName)}</span>` : '';
     return `<tr>
-  <td><a href="${BASE_PATH}/?agent=${escAttr(p.name)}" style="color:var(--accent);text-decoration:none">${esc(p.name)}</a>${dispName}</td>
+  <td><a href="?agent=${escAttr(p.name)}" style="color:var(--accent);text-decoration:none">${esc(p.name)}</a>${dispName}</td>
   <td><span class="presence-dot presence-${esc(p.presence)}"></span>${esc(p.presence)}</td>
   <td>${queueBadge(p.queueDepth)}</td>
   <td>${taskLink}</td>
@@ -125,7 +125,7 @@ export function renderCurrent(): string {
 
   const taskRows2 = tasks.map(t =>
     `<tr>
-  <td><a href="${BASE_PATH}/?view=causaltree&thread=${escAttr(t.rootId)}">${esc(t.rootId.slice(0,8))}…</a><br>
+  <td><a href="?view=causaltree&thread=${escAttr(t.rootId)}">${esc(t.rootId.slice(0,8))}…</a><br>
       <span style="font-size:10px;color:var(--text2)">${esc(t.preview)}</span></td>
   <td class="cell-num">${t.size}</td>
   <td style="font-size:11px">${fmtRelative(t.end)}</td>
@@ -149,5 +149,5 @@ export function renderCurrent(): string {
 </table>
 </div></div>`;
 
-  return htmlShell({ view: 'current', totalMsgs, totalAgents, totalLinks: 0, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml });
+  return htmlShell({ view: 'current', totalMsgs, totalAgents, totalLinks: 0, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, prefix });
 }

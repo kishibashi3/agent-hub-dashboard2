@@ -112,7 +112,7 @@ export function buildHeatmap(top: string[], counts: Record<string, number>, tota
 }
 
 // ── renderMesh ─────────────────────────────────────────────────
-export function renderMesh(data: MeshData): string {
+export function renderMesh(data: MeshData, prefix: string): string {
   const { top, counts, totals, nodes, links, totalMsgs, totalAgents } = data;
   const heatmapHtml = buildHeatmap(top, counts, totals);
   const nodeDefault = Math.min(top.length, 14);
@@ -134,11 +134,12 @@ export function renderMesh(data: MeshData): string {
     mainHtml,
     nodesJson: JSON.stringify(nodes),
     linksJson: JSON.stringify(links),
+    prefix,
   });
 }
 
 // ── renderMatrix ───────────────────────────────────────────────
-export function renderMatrix(data: MeshData): string {
+export function renderMatrix(data: MeshData, prefix: string): string {
   const { top, counts, totals, links, totalMsgs, totalAgents } = data;
   const heatmapHtml = buildHeatmap(top, counts, totals);
   const navHtml = renderNav('matrix');
@@ -155,5 +156,6 @@ export function renderMatrix(data: MeshData): string {
     nodeDefault: 0,
     navHtml,
     mainHtml,
+    prefix,
   });
 }

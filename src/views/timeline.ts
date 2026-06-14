@@ -1,9 +1,8 @@
 import { getDb, tenantCond } from '../db.js';
 import { htmlShell, renderNav, asTrustedScript } from '../layout.js';
-import { BASE_PATH } from '../constants.js';
 
 // ── renderTimeline ─────────────────────────────────────────────
-export function renderTimeline(rangeLabel: string): string {
+export function renderTimeline(rangeLabel: string, prefix: string): string {
   const db = getDb();
   let buckets: { time: string; count: number }[] = [];
   let agBuckets: { time: string; active: number; idle: number }[] = [];
@@ -59,7 +58,7 @@ export function renderTimeline(rangeLabel: string): string {
   }
 
   const rangeBtns = ['24h','7d','30d'].map(r =>
-    `<a href="${BASE_PATH}/?view=timeline&range=${r}" class="range-btn ${r === rangeLabel ? 'active' : ''}">${r}</a>`
+    `<a href="?view=timeline&range=${r}" class="range-btn ${r === rangeLabel ? 'active' : ''}">${r}</a>`
   ).join(' ');
 
   const bucketsJson = JSON.stringify(buckets);
@@ -164,5 +163,5 @@ if (agBuckets.length === 0) {
 }
 </script>`;
 
-  return htmlShell({ view: 'timeline', totalMsgs, totalAgents, totalLinks: 0, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, extraScripts: asTrustedScript(extraScripts) });
+  return htmlShell({ view: 'timeline', totalMsgs, totalAgents, totalLinks: 0, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, extraScripts: asTrustedScript(extraScripts), prefix });
 }

@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { PORT, DB_PATH, TENANT, BASE_PATH } from './constants.js';
+import { PORT, DB_PATH, TENANT, resolveBasePath } from './constants.js';
 import { errorPage } from './layout.js';
 import { getData, renderMesh, renderMatrix } from './views/mesh.js';
 import { renderTimeline } from './views/timeline.js';
@@ -65,46 +65,49 @@ app.get('/', (req: Request, res: Response) => {
   const filterFrom = req.query.from as string | undefined;
   const filterTo = req.query.to as string | undefined;
 
+  // Resolve the deployment prefix per request (X-Forwarded-Prefix → BASE_PATH → '').
+  const prefix = resolveBasePath(req.headers['x-forwarded-prefix']);
+
   try {
     let html: string;
     switch (view) {
       case 'mesh': {
         const data = getData();
-        html = renderMesh(data);
+        html = renderMesh(data, prefix);
         break;
       }
       case 'matrix': {
         const data = getData();
-        html = renderMatrix(data);
+        html = renderMatrix(data, prefix);
         break;
       }
       case 'timeline':
-        html = renderTimeline(range);
+        html = renderTimeline(range, prefix);
         break;
       case 'links':
-        html = renderLinks();
+        html = renderLinks(prefix);
         break;
       case 'agent':
         if (!agent) {
-          res.redirect(`${BASE_PATH}/?view=mesh`);
+          res.redirect(`${prefix}/?view=mesh`);
           return;
         }
-        html = renderAgent(agent);
+        html = renderAgent(agent, prefix);
         break;
       case 'current':
-        html = renderCurrent();
+        html = renderCurrent(prefix);
         break;
       case 'health':
-        html = renderHealth();
+        html = renderHealth(prefix);
         break;
       case 'causaltree':
-        html = renderCausalTree(thread, filterAgent, filterFrom, filterTo);
+        html = renderCausalTree(thread, filterAgent, filterFrom, filterTo, prefix);
         break;
       case 'live':
-        html = renderLive();
+        html = renderLive(prefix);
         break;
       default:
-        html = renderMesh(getData());
+        html = renderMesh(getData(), prefix);
     }
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(html);

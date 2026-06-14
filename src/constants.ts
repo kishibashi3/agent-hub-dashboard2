@@ -3,7 +3,32 @@ export const DB_PATH = process.env.AGENT_HUB_DB_PATH ?? '/app/data/app.db';
 if (!process.env.AGENT_HUB_TENANT) throw new Error('AGENT_HUB_TENANT is required');
 export const TENANT = process.env.AGENT_HUB_TENANT;
 export const PORT = parseInt(process.env.PORT ?? '8080', 10);
-export const BASE_PATH = (process.env.BASE_PATH ?? '').replace(/\/$/, '');
+export const BASE_PATH = (process.env.BASE_PATH ?? '').replace(/\/+$/, '');
+
+/**
+ * Resolve the deployment base path (URL prefix) for a request.
+ *
+ * Standard reverse-proxy subpath handling: nginx mounts the app under e.g.
+ * `/dashboard2/` and forwards the mount point in the `X-Forwarded-Prefix`
+ * header. We read it per-request so the prefix is never hardcoded, survives
+ * redeploys, and works at any mount point (including root).
+ *
+ * Fallback order: `X-Forwarded-Prefix` → env `BASE_PATH` → `''`.
+ *
+ * The header value is sanitized to an absolute URL path (leading slash, no
+ * scheme/host/control chars) with any trailing slash stripped; a malformed or
+ * suspicious header is ignored in favor of the env fallback so a client cannot
+ * inject a `<base href>`.
+ */
+export function resolveBasePath(forwardedPrefix?: string | string[]): string {
+  const raw = Array.isArray(forwardedPrefix) ? forwardedPrefix[0] : forwardedPrefix;
+  const header = (raw ?? '').trim().replace(/\/+$/, '');
+  // Accept only a rooted path of one or more segments (e.g. `/dashboard2`,
+  // `/a/b`). Rejects protocol-relative `//host`, schemes, and junk so a
+  // client-supplied header cannot hijack `<base href>`.
+  if (header && /^\/[A-Za-z0-9._~\-]+(?:\/[A-Za-z0-9._~\-]+)*$/.test(header)) return header;
+  return BASE_PATH;
+}
 export const STALE_HOURS = parseInt(process.env.AGENT_HUB_DASHBOARD_STALE_HOURS ?? '24', 10);
 
 // ── Health constants ───────────────────────────────────────────
