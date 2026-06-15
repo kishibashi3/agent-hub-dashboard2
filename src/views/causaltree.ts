@@ -1,6 +1,15 @@
-import { getDb, tenantCond } from '../db.js';
+import { getDb, tenantCond, loadThreadStatuses, effectiveStatus, type EffectiveStatus, type ThreadStatus } from '../db.js';
 import { esc, escAttr } from '../utils.js';
 import { htmlShell, renderNav } from '../layout.js';
+import { TENANT } from '../constants.js';
+
+// 4-state status labels (mirrors v1 _status_badge).
+const STATUS_LABEL: Record<EffectiveStatus, string> = {
+  running: '▶ running',
+  stale: '⚠ stale',
+  done: '✓ done',
+  stash: '📌 stash',
+};
 
 // ── renderCausalTree ───────────────────────────────────────────
 export function renderCausalTree(threadId?: string, filterAgent?: string, filterFrom?: string, filterTo?: string, prefix: string = ''): string {
@@ -87,6 +96,10 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
     const baseParams = tAnd ? [...tParams, ...tParams, ...extraParams] : extraParams;
     const threadRows = db.prepare(threadSql).all(...baseParams) as { root_message_id: string; thread_size: number; thread_start: string | null; thread_end: string | null }[];
 
+    // Persisted thread statuses (done/stash/running marks), loaded once per render.
+    const statusMap = loadThreadStatuses();
+    const tenantKey = TENANT ?? 'default';
+
     // For each thread, get messages to build tree
     const threadHtmlList: string[] = [];
     for (const t of threadRows) {
@@ -133,13 +146,20 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
       const rootSender = rootMsg ? esc(rootMsg.sender) : '?';
       const rootRecipient = rootMsg ? esc(rootMsg.recipient) : '?';
 
-      // Status heuristic: running = last message within 1h, else done
-      const nowMs = Date.now();
-      const endMs = t.thread_end ? new Date(t.thread_end).getTime() : 0;
-      const isRunning = nowMs - endMs < 60 * 60 * 1000;
-      const statusTag = isRunning
-        ? `<span style="background:#39d35333;color:#39d353;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:bold">running</span>`
-        : `<span style="background:#484f5833;color:#7d8590;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:bold">done</span>`;
+      // Effective status (4 states) — faithful port of v1 effective_status.
+      const status = effectiveStatus(t.root_message_id, tenantKey, t.thread_end, statusMap);
+      const statusTag = `<span class="badge badge-${status}">${STATUS_LABEL[status]}</span>`;
+
+      // Mark buttons (mirrors v1 _status_mark_form): offer the transitions not
+      // already in effect — done/stash always available, reopen only when the
+      // thread is currently explicitly done/stash.
+      const markBtn = (s: ThreadStatus, label: string) =>
+        `<button class="ct-mark" data-thread="${escAttr(t.root_message_id)}" data-status="${s}" title="mark ${s}">${label}</button>`;
+      const buttons: string[] = [];
+      if (status !== 'done') buttons.push(markBtn('done', '✓'));
+      if (status !== 'stash') buttons.push(markBtn('stash', '📌'));
+      if (status === 'done' || status === 'stash') buttons.push(markBtn('running', '↺'));
+      const markButtons = `<span class="ct-mark-btns" onclick="event.stopPropagation()">${buttons.join('')}</span>`;
       threadHtmlList.push(`
 <details style="margin-bottom:10px;border:1px solid var(--border);border-radius:6px;overflow:hidden">
   <summary style="padding:10px 14px;background:var(--bg2);cursor:pointer;font-size:12px;list-style:none">
@@ -149,6 +169,7 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
       <span style="color:var(--text)">${rootRecipient}</span>
       <span style="color:var(--text2);font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${preview}</span>
       ${statusTag}
+      ${markButtons}
       <span class="dim" style="white-space:nowrap">${t.thread_size} msgs</span>
       <a href="?view=causaltree&thread=${escAttr(t.root_message_id)}" style="font-size:11px;color:var(--accent);white-space:nowrap" onclick="event.stopPropagation()">→ detail</a>
     </div>
@@ -173,7 +194,24 @@ export function renderCausalTree(threadId?: string, filterAgent?: string, filter
 ${filterBar}
 <p class="dim" style="margin-bottom:12px">${threadRows.length} threads (top 30 by size)</p>
 ${threadHtmlList.join('')}
-</div></div>`;
+</div></div>
+<script>
+// Mark buttons → POST the new status, then reload. The fetch URL is relative so
+// it resolves against the document's <base href> (the deployment prefix); no
+// BASE_PATH interpolation is needed and the script contains no user data.
+document.querySelectorAll('.ct-mark').forEach(function (btn) {
+  btn.addEventListener('click', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    fetch('api/thread-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ thread_id: btn.dataset.thread, status: btn.dataset.status })
+    }).then(function (r) { if (r.ok) location.reload(); else alert('Failed to update status'); })
+      .catch(function () { alert('Failed to update status'); });
+  });
+});
+</script>`;
 
     return htmlShell({ view: 'causaltree', totalMsgs, totalAgents, totalLinks: 0, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, prefix });
   } catch (err) {

@@ -1,5 +1,8 @@
 // ── Environment ────────────────────────────────────────────────
 export const DB_PATH = process.env.AGENT_HUB_DB_PATH ?? '/app/data/app.db';
+// Writable dashboard-owned DB (thread status). Separate from the read-only hub
+// app.db so the dashboard never writes into the hub's database.
+export const DASHBOARD_DATA_DB_PATH = process.env.AGENT_HUB_DASHBOARD_DB_PATH ?? '/app/data/dashboard_data.db';
 if (!process.env.AGENT_HUB_TENANT) throw new Error('AGENT_HUB_TENANT is required');
 export const TENANT = process.env.AGENT_HUB_TENANT;
 export const PORT = parseInt(process.env.PORT ?? '8080', 10);

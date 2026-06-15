@@ -104,6 +104,12 @@ table.link-list .bar { height:8px; background:var(--accent); border-radius:2px; 
 .badge-critical { background:#f78166; color:#fff; }
 .badge-severe { background:#da3633; color:#fff; }
 .badge-stale { background:#ffa657; color:#000; }
+.badge-running { background:#39d35333; color:#39d353; }
+.badge-done { background:#484f5833; color:#7d8590; }
+.badge-stash { background:#a371f733; color:#a371f7; }
+.ct-mark-btns { display:inline-flex; gap:3px; }
+.ct-mark { background:none; border:1px solid var(--border); color:var(--text2); border-radius:3px; cursor:pointer; font-size:11px; line-height:1.4; padding:1px 6px; font-family:monospace; }
+.ct-mark:hover { border-color:var(--accent); color:var(--accent); }
 .health-section { margin-top:28px; }
 .health-section h3 { font-size:12px; color:var(--text2); margin:0 0 6px; text-transform:uppercase; letter-spacing:0.08em; }
 .health-note { font-size:11px; color:var(--text2); margin:4px 0 8px; }
