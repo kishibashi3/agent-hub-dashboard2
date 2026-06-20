@@ -34,6 +34,17 @@ export function resolveBasePath(forwardedPrefix?: string | string[]): string {
 }
 export const STALE_HOURS = parseInt(process.env.AGENT_HUB_DASHBOARD_STALE_HOURS ?? '24', 10);
 
+// ── otelite (token 燃費 / OTel traces) ─────────────────────────
+// otelite は外部ツール (Grafana Alloy ベース) で改造しない。既存 API の消費のみ。
+// infra 値はコードにハードコードせず deploy 設定 (docker-compose) で渡す (ecosystem redline #3)。
+// 未設定 (空文字) なら feature 無効化 = 全ノード N/A に縮退。
+export const OTELITE_URL = (process.env.OTELITE_URL ?? '').replace(/\/$/, '');
+export const OTELITE_TIMEOUT_MS = parseInt(process.env.OTELITE_TIMEOUT_MS ?? '1500', 10);
+// NaN ガード: OTELITE_CONCURRENCY=foo 等の不正値で worker 0 本の silent 縮退を防ぐ (ecosystem redline #1)。
+const _otCc = parseInt(process.env.OTELITE_CONCURRENCY ?? '8', 10);
+export const OTELITE_CONCURRENCY = Number.isNaN(_otCc) ? 8 : _otCc;
+export const OTELITE_CACHE_TTL_MS = parseInt(process.env.OTELITE_CACHE_TTL_MS ?? '60000', 10);
+
 // ── Health constants ───────────────────────────────────────────
 export const PPD_THREAD_THRESHOLD = parseInt(process.env.AGENT_HUB_PPD_THREAD_THRESHOLD ?? '5', 10);
 export const PPD_CRITICAL_THRESHOLD = parseInt(process.env.AGENT_HUB_PPD_CRITICAL_THRESHOLD ?? '10', 10);
