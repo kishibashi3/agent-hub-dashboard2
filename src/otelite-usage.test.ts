@@ -13,7 +13,7 @@ import {
   extractSpans,
   extractUsageFromTrace,
   sumUsage,
-} from './otelite.js';
+} from './otelite-usage.js';
 
 test('msgIdToTraceId: dashed UUID → dashless hex', () => {
   assert.equal(
