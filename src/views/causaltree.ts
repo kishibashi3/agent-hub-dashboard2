@@ -31,7 +31,11 @@ function fuelTotalBadge(u: TokenUsage, label: string): string {
 }
 
 // ── renderCausalTree ───────────────────────────────────────────
-export async function renderCausalTree(threadId?: string, filterAgent?: string, filterFrom?: string, filterTo?: string, prefix: string = '', totalLinks: number = 0): Promise<string> {
+// `prefix` and `totalLinks` are always supplied by the route and lead as required
+// params; the four filters derive from optional query strings and trail. Ordering
+// (not just defaults) is what makes `totalLinks` required — TS1016 forbids a
+// required param after an optional one (issue #31).
+export async function renderCausalTree(prefix: string, totalLinks: number, threadId?: string, filterAgent?: string, filterFrom?: string, filterTo?: string): Promise<string> {
   const db = getDb();
   let totalMsgs = 0;
   let totalAgents = 0;
