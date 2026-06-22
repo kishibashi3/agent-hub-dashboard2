@@ -123,7 +123,7 @@ app.get('/', async (req: Request, res: Response) => {
         html = renderHealth(prefix, totalLinks);
         break;
       case 'causaltree':
-        html = await renderCausalTree(thread, filterAgent, filterFrom, filterTo, prefix, totalLinks);
+        html = await renderCausalTree(prefix, totalLinks, thread, filterAgent, filterFrom, filterTo);
         break;
       case 'live':
         html = renderLive(prefix, totalLinks);

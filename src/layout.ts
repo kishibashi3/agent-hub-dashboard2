@@ -178,7 +178,10 @@ export function htmlShell(opts: {
   bodyClass?: string;
   totalMsgs?: number;
   totalAgents?: number;
-  totalLinks?: number;
+  /** Required: the view-independent `active links` header count (issue #29/#31).
+   *  Kept non-optional so a view that forgets to thread it is a compile error,
+   *  not a silent `0` regression. */
+  totalLinks: number;
   nodeCount?: number;
   nodeDefault?: number;
   navHtml: string;
@@ -193,7 +196,7 @@ export function htmlShell(opts: {
     view,
     totalMsgs = 0,
     totalAgents = 0,
-    totalLinks = 0,
+    totalLinks,
     nodeCount = 0,
     nodeDefault = 0,
     navHtml,
