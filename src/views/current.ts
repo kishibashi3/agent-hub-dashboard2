@@ -4,7 +4,7 @@ import { htmlShell, renderNav } from '../layout.js';
 import { STALE_HOURS } from '../constants.js';
 
 // ── renderCurrent ──────────────────────────────────────────────
-export function renderCurrent(prefix: string): string {
+export function renderCurrent(prefix: string, totalLinks: number): string {
   const db = getDb();
   let totalMsgs = 0;
   let totalAgents = 0;
@@ -149,5 +149,5 @@ export function renderCurrent(prefix: string): string {
 </table>
 </div></div>`;
 
-  return htmlShell({ view: 'current', totalMsgs, totalAgents, totalLinks: 0, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, prefix });
+  return htmlShell({ view: 'current', totalMsgs, totalAgents, totalLinks, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, prefix });
 }

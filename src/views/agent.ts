@@ -4,7 +4,7 @@ import { htmlShell, renderNav } from '../layout.js';
 import { TENANT } from '../constants.js';
 
 // ── renderAgent ────────────────────────────────────────────────
-export function renderAgent(handle: string, prefix: string): string {
+export function renderAgent(handle: string, prefix: string, totalLinks: number): string {
   const db = getDb();
   let totalMsgs = 0;
   let totalAgents = 0;
@@ -97,5 +97,5 @@ agent <strong>${h}</strong> not found in ${esc(TENANT ?? 'any tenant')}.
   }
 
   const mainHtml = `<div class="alt-main">${bodyHtml}</div>`;
-  return htmlShell({ view: 'agent', totalMsgs, totalAgents, totalLinks: 0, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, prefix });
+  return htmlShell({ view: 'agent', totalMsgs, totalAgents, totalLinks, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, prefix });
 }

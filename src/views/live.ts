@@ -22,7 +22,7 @@ export function getLiveFeedData(db: Database.Database, since?: string): LiveMsg[
 }
 
 // ── renderLive ─────────────────────────────────────────────────
-export function renderLive(prefix: string): string {
+export function renderLive(prefix: string, totalLinks: number): string {
   const db = getDb();
   let totalMsgs = 0;
   let totalAgents = 0;
@@ -77,5 +77,5 @@ connect();
 function escH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 </script>`;
 
-  return htmlShell({ view: 'live', totalMsgs, totalAgents, totalLinks: 0, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, extraScripts: asTrustedScript(extraScripts), prefix });
+  return htmlShell({ view: 'live', totalMsgs, totalAgents, totalLinks, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, extraScripts: asTrustedScript(extraScripts), prefix });
 }
