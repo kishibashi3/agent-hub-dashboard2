@@ -16,18 +16,17 @@
 // この方式なら全 trace を走査せず、ツリーに出ている msg_id だけを直接引ける
 // (任意の過去メッセージにも効く)。
 import { OTELITE_URL, OTELITE_TIMEOUT_MS, OTELITE_CONCURRENCY, OTELITE_CACHE_TTL_MS } from './constants.js';
+import {
+  type TokenUsage,
+  msgIdToTraceId,
+  extractUsageFromTrace,
+  sumUsage,
+} from './otelite-usage.js';
 
-export interface TokenUsage {
-  input: number;
-  output: number;
-  cacheRead: number;
-  model: string | null;
-}
-
-// msg_id (dashed UUID) → trace_id (dashless)
-function msgIdToTraceId(msgId: string): string {
-  return msgId.replace(/-/g, '');
-}
+// 純粋ロジック (受理形状の正規化・抽出・合算) は otelite-usage.ts に分離した
+// (env 非依存 → unit test 可能、issue #27)。consumer の import 経路を変えないよう
+// 型と sumUsage はここから re-export する。
+export { type TokenUsage, sumUsage } from './otelite-usage.js';
 
 // ── in-process TTL cache ───────────────────────────────────────
 // 燃費は確定済み msg については不変なので短時間キャッシュで再 fetch を抑える。
@@ -43,16 +42,6 @@ let breakerOpenUntil = 0;
 
 function now(): number { return Date.now(); }
 
-function parseIntAttr(v: string | undefined): number {
-  if (v == null) return NaN;
-  const n = parseInt(v, 10);
-  return Number.isNaN(n) ? NaN : n;
-}
-
-interface TraceDetail {
-  spans?: Array<{ attributes?: Record<string, string> }>;
-}
-
 async function fetchUsageUncached(msgId: string): Promise<TokenUsage | null> {
   if (!OTELITE_URL) return null;                 // 明示無効化
   if (now() < breakerOpenUntil) return null;     // circuit open
@@ -64,26 +53,8 @@ async function fetchUsageUncached(msgId: string): Promise<TokenUsage | null> {
     const res = await fetch(url, { signal: ctrl.signal });
     if (res.status === 404) return null;         // この msg は telemetry なし
     if (!res.ok) return null;
-    const data = (await res.json()) as TraceDetail;
-    const spans = data.spans ?? [];
-    let input = 0, output = 0, cacheRead = 0;
-    let model: string | null = null;
-    let found = false;
-    for (const s of spans) {
-      const a = s.attributes ?? {};
-      // 念のため message.id が一致する span のみ集計 (通常 1 span)
-      const mid = a['message.id'];
-      if (mid && msgIdToTraceId(mid) !== traceId) continue;
-      const i = parseIntAttr(a['gen_ai.usage.input_tokens']);
-      const o = parseIntAttr(a['gen_ai.usage.output_tokens']);
-      const c = parseIntAttr(a['gen_ai.usage.cache_read.input_tokens']);
-      if (!Number.isNaN(i)) { input += i; found = true; }
-      if (!Number.isNaN(o)) { output += o; found = true; }
-      if (!Number.isNaN(c)) { cacheRead += c; found = true; }
-      const m = a['gen_ai.request.model'];
-      if (m) model = m;
-    }
-    return found ? { input, output, cacheRead, model } : null;
+    const data = (await res.json()) as unknown;
+    return extractUsageFromTrace(data, traceId);
   } catch {
     // timeout / 接続失敗 → breaker を開いて以降を即 null に
     breakerOpenUntil = now() + BREAKER_COOLDOWN_MS;
@@ -119,14 +90,4 @@ export async function fetchUsageMap(msgIds: string[]): Promise<Map<string, Token
   const n = Math.max(1, Math.min(OTELITE_CONCURRENCY, unique.length));
   await Promise.all(Array.from({ length: n }, worker));
   return map;
-}
-
-// ツリーの合計燃費 (N/A の msg は 0 として無視)。
-export function sumUsage(usages: Iterable<TokenUsage | null>): TokenUsage {
-  let input = 0, output = 0, cacheRead = 0;
-  for (const u of usages) {
-    if (!u) continue;
-    input += u.input; output += u.output; cacheRead += u.cacheRead;
-  }
-  return { input, output, cacheRead, model: null };
 }
