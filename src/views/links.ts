@@ -3,7 +3,7 @@ import { esc, escAttr } from '../utils.js';
 import { htmlShell, renderNav } from '../layout.js';
 
 // ── renderLinks ────────────────────────────────────────────────
-export function renderLinks(prefix: string): string {
+export function renderLinks(prefix: string, totalLinks: number): string {
   const db = getDb();
   let totalMsgs = 0;
   let totalAgents = 0;
@@ -58,5 +58,9 @@ export function renderLinks(prefix: string): string {
 </table>
 </div></div>`;
 
-  return htmlShell({ view: 'links', totalMsgs, totalAgents, totalLinks: items.length, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, prefix });
+  // Header `active links` uses the global v1-faithful count (mesh getData().links,
+  // c>=3 undirected pairs) passed in by the caller — NOT `items.length`, which is
+  // this view's top-50 list slice (different definition). The list heading below
+  // keeps using items.length for its own "top N" label.
+  return htmlShell({ view: 'links', totalMsgs, totalAgents, totalLinks, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, prefix });
 }

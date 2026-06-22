@@ -87,45 +87,49 @@ app.get('/', async (req: Request, res: Response) => {
   const prefix = resolveBasePath(req.headers['x-forwarded-prefix']);
 
   try {
+    // v1-faithful header stat: the `active links` count is computed ONCE here,
+    // view-independent, and threaded into every view — mirroring v1
+    // server.py:4221 `total_links_for_header = len(links)` (issue #29). The
+    // canonical definition is mesh `getData().links` (undirected pairs, c>=3,
+    // within top_set). Computing it per-view is what regressed it to 0.
+    const meshData = getData();
+    const totalLinks = meshData.links.length;
+
     let html: string;
     switch (view) {
-      case 'mesh': {
-        const data = getData();
-        html = renderMesh(data, prefix);
+      case 'mesh':
+        html = renderMesh(meshData, prefix);
         break;
-      }
-      case 'matrix': {
-        const data = getData();
-        html = renderMatrix(data, prefix);
+      case 'matrix':
+        html = renderMatrix(meshData, prefix);
         break;
-      }
       case 'timeline':
-        html = renderTimeline(range, prefix);
+        html = renderTimeline(range, prefix, totalLinks);
         break;
       case 'links':
-        html = renderLinks(prefix);
+        html = renderLinks(prefix, totalLinks);
         break;
       case 'agent':
         if (!agent) {
           res.redirect(`${prefix}/?view=mesh`);
           return;
         }
-        html = renderAgent(agent, prefix);
+        html = renderAgent(agent, prefix, totalLinks);
         break;
       case 'current':
-        html = renderCurrent(prefix);
+        html = renderCurrent(prefix, totalLinks);
         break;
       case 'health':
-        html = renderHealth(prefix);
+        html = renderHealth(prefix, totalLinks);
         break;
       case 'causaltree':
-        html = await renderCausalTree(thread, filterAgent, filterFrom, filterTo, prefix);
+        html = await renderCausalTree(thread, filterAgent, filterFrom, filterTo, prefix, totalLinks);
         break;
       case 'live':
-        html = renderLive(prefix);
+        html = renderLive(prefix, totalLinks);
         break;
       default:
-        html = renderMesh(getData(), prefix);
+        html = renderMesh(meshData, prefix);
     }
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(html);

@@ -9,7 +9,7 @@ import {
 } from '../constants.js';
 
 // ── renderHealth ───────────────────────────────────────────────
-export function renderHealth(prefix: string): string {
+export function renderHealth(prefix: string, totalLinks: number): string {
   const db = getDb();
   let totalMsgs = 0;
   let totalAgents = 0;
@@ -208,5 +208,5 @@ export function renderHealth(prefix: string): string {
 </div>
 </div></div>`;
 
-  return htmlShell({ view: 'health', totalMsgs, totalAgents, totalLinks: 0, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, prefix });
+  return htmlShell({ view: 'health', totalMsgs, totalAgents, totalLinks, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, prefix });
 }

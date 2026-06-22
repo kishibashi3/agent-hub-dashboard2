@@ -31,7 +31,7 @@ function fuelTotalBadge(u: TokenUsage, label: string): string {
 }
 
 // ── renderCausalTree ───────────────────────────────────────────
-export async function renderCausalTree(threadId?: string, filterAgent?: string, filterFrom?: string, filterTo?: string, prefix: string = ''): Promise<string> {
+export async function renderCausalTree(threadId?: string, filterAgent?: string, filterFrom?: string, filterTo?: string, prefix: string = '', totalLinks: number = 0): Promise<string> {
   const db = getDb();
   let totalMsgs = 0;
   let totalAgents = 0;
@@ -90,7 +90,7 @@ export async function renderCausalTree(threadId?: string, filterAgent?: string, 
 </div>
 <div class="thread-msg-list">${msgItems}</div>
 </div></div>`;
-      return htmlShell({ view: 'causaltree', totalMsgs, totalAgents, totalLinks: 0, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, prefix });
+      return htmlShell({ view: 'causaltree', totalMsgs, totalAgents, totalLinks, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, prefix });
     }
 
     // Thread list view
@@ -251,7 +251,7 @@ document.querySelectorAll('.ct-mark').forEach(function (btn) {
 });
 </script>`;
 
-    return htmlShell({ view: 'causaltree', totalMsgs, totalAgents, totalLinks: 0, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, prefix });
+    return htmlShell({ view: 'causaltree', totalMsgs, totalAgents, totalLinks, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, prefix });
   } catch (err) {
     try { db.close(); } catch { /* ignore */ }
     throw err;

@@ -2,7 +2,7 @@ import { getDb, tenantCond } from '../db.js';
 import { htmlShell, renderNav, asTrustedScript } from '../layout.js';
 
 // ── renderTimeline ─────────────────────────────────────────────
-export function renderTimeline(rangeLabel: string, prefix: string): string {
+export function renderTimeline(rangeLabel: string, prefix: string, totalLinks: number): string {
   const db = getDb();
   let buckets: { time: string; count: number }[] = [];
   let agBuckets: { time: string; active: number; idle: number }[] = [];
@@ -163,5 +163,5 @@ if (agBuckets.length === 0) {
 }
 </script>`;
 
-  return htmlShell({ view: 'timeline', totalMsgs, totalAgents, totalLinks: 0, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, extraScripts: asTrustedScript(extraScripts), prefix });
+  return htmlShell({ view: 'timeline', totalMsgs, totalAgents, totalLinks, nodeCount: 0, nodeDefault: 0, navHtml, mainHtml, extraScripts: asTrustedScript(extraScripts), prefix });
 }
