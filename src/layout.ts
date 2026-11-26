@@ -438,6 +438,7 @@ export function renderNav(currentView: string, agentHandle?: string): string {
   const liveViews = [
     ['live', '📡 Live Feed', `?view=live`],
     ['current', '⚡ Current', `?view=current`],
+    ['conversation', '💬 Conversation', `?view=conversation`],
   ];
   const drillViews = [
     ['causaltree', 'Causal Tree', `?view=causaltree`],
